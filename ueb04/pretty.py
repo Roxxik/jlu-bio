@@ -1,19 +1,4 @@
-import sys
-from collections import defaultdict
 import argparse
-
-def reverse_dict(d):
-    res = defaultdict(list)
-    for key, val in d.items():
-        res[val].append(key)
-    return res
-
-
-def filtered(seq):
-    for c in seq:
-        if c not in " \n":
-            yield c
-
 
 # Table 11
 code_rev = {
@@ -54,7 +39,6 @@ def shuffle(s):
 def codon_sort_key(codon):
     table = str.maketrans('TCAG', 'ABCD')
     return shuffle(codon.translate(table))
-
 
 def expand_codons(code_rev, translation):
     code = dict()
@@ -189,7 +173,6 @@ def main():
     args = parser.parse_args()
     global n
     n = int(args.blocks) * 3
-
 
     with open(args.input) as input_file, open(args.output, "w") as output_file:
         gen = mktabulator(output_file)
