@@ -239,8 +239,13 @@ def main():
   #codon_freq = calculate_codon_frequency(sequences.values())
   #print(codon_freq)
   #plot_codon_frequency(codon_freq)
-  #groups = group_codon_frequency_by_amino_acid(sequences.values())
-  #print(groups)
-  #plot_codons_grouped(groups)
+  groups = group_codon_frequency_by_amino_acid(sequences.values())
+  print(groups)
+  plot_codons_grouped(groups)
+
+  # TODO compare1 genome to full sequence, code density, plot where the genes are?
+  # gc content, codon_frequencies
+  # 
+  # k-mer analysis, also in comparision
 if __name__ == "__main__":
   main()
