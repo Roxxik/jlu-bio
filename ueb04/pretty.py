@@ -1,12 +1,19 @@
 import sys
+from collections import defaultdict
+import argparse
+
+def reverse_dict(d):
+    res = defaultdict(list)
+    for key, val in d.items():
+        res[val].append(key)
+    return res
+
 
 def filtered(seq):
     for c in seq:
         if c not in " \n":
             yield c
 
-seq = sys.stdin.read()
-seq = filtered(seq)
 
 # Table 11
 code_rev = {
@@ -34,79 +41,167 @@ code_rev = {
 }
 
 translation = {
-    "N": "ATGC",
+    "N": "TCAG",
     "R": "AG",
     "Y": "TC",
-    "H": "ATC"
+    "H": "TCA"
 }
 
+def shuffle(s):
+    return ''.join([s[1], s[0], s[2]])
+
+
+def codon_sort_key(codon):
+    table = str.maketrans('TCAG', 'ABCD')
+    return shuffle(codon.translate(table))
+
+
 def expand_codons(code_rev, translation):
-    # Initialize an empty dictionary to hold the expanded codon to amino acid mappings
-    codon_to_aa = {}
-
-    # Iterate over the amino acid codes and their corresponding codon patterns
+    code = dict()
     for aa, patterns in code_rev.items():
-        # For each pattern, replace the special letters with the corresponding nucleotides
         for pattern in patterns:
-            # Generate all possible combinations for the codon pattern
-            expanded_patterns = [pattern]
+            codons = [pattern]
             for char, replacements in translation.items():
-                new_expanded_patterns = []
-                # Replace each special character with each of its possible nucleotides
-                for expanded_pattern in expanded_patterns:
-                    if char in expanded_pattern:
+                new_codons = []
+                for codon in codons:
+                    if char in codon:
                         for replacement in replacements:
-                            new_expanded_patterns.append(expanded_pattern.replace(char, replacement, 1))
+                            new_codons.append(codon.replace(char, replacement, 1))
                     else:
-                        new_expanded_patterns.append(expanded_pattern)
-                expanded_patterns = new_expanded_patterns
+                        new_codons.append(codon)
+                codons = new_codons
 
-            # Add the expanded patterns to the codon_to_aa dictionary
-            for codon in expanded_patterns:
-                codon_to_aa[codon] = aa
-
-    return codon_to_aa
+            for codon in codons:
+                code[codon] = aa
+    result = dict(sorted(code.items(), key=lambda x: codon_sort_key(x[0])))
+    return result
 
 code = expand_codons(code_rev, translation)
 
-n = 48
+# generator that consumes input lines of nucleotides
+# and prints them to a file in a table. with indices and amino acids
+# no validation is done in here. every charater is used as a nucleotide
+def tabulator(output_file):
+    try:
+        line = yield
+    except StopIteration:
+        return
+    seq = iter(line)
+    try:
+        i = 0
+        codons = list()
+        while True:
+            codon = ""
 
-try:
-    i = 0
-    print(f"{i:>5}: ", end="")
-    codons = list()
-    while True:
-        codon = ""
-        
-        # first base
-        a = next(seq)
-        codon += a
-        i += 1
-        print (a, end="")
+            # first base
+            a = None
+            while a is None:
+                try:
+                    a = next(seq)
+                except StopIteration:
+                    try:
+                        line = yield
+                    except StopIteration:
+                        return
+                    seq = iter(line)
+            # if we actually got a first base, print in between stuff
+            # either the rows header (last rows amino acids and this rows offset)
+            # or a space between tripletts
+            if i % n == 0:
+                if i != 0:
+                    print("  " + "".join(code.get(codon, 'X') for codon in codons), end="", file=output_file)
+                    print(file=output_file)
+                    codons = list()
+                print(f"{i:>5}: ", end="", file=output_file)
+            else:
+                print(" ", end="", file=output_file)
 
-        # second base
-        b = next(seq)
-        codon += b
-        i += 1
-        print (b, end="")
+            codon += a
+            i += 1
+            print(a, end="", file=output_file)
 
-        # third base
-        c = next(seq)
-        codon += c
-        i += 1
-        print (c, end="")
+            # second base
+            b = None
+            while b is None:
+                try:
+                    b = next(seq)
+                except StopIteration:
+                    try:
+                        line = yield
+                    except StopIteration:
+                        return
+                    seq = iter(line)
+            codon += b
+            i += 1
+            print(b, end="", file=output_file)
 
-        codons.append(codon)
+            # third base
+            c = None
+            while c is None:
+                try:
+                    c = next(seq)
+                except StopIteration:
+                    try:
+                        line = yield
+                    except StopIteration:
+                        return
+                    seq = iter(line)
+            codon += c
+            i += 1
+            print(c, end="", file=output_file)
 
-        if i % n == 0:
-            print("  " + "".join(code.get(codon, 'X') for codon in codons), end="")
-            codons = list()
-            print()
-            print(f"{i:>5}: ", end="")
-        else:
-            print(" ", end="")
+            codons.append(codon)
+    finally:
+        # only do anything at all if we are in the midst of a line
+        if i % n != 0:
+            j = i
+            # finish the last triplett
+            k = (2 - ((j-1) % 3))
+            print(" " * k, end="", file=output_file)
+            j += k
+            while j % n != 0:
+                print("    ", end="", file=output_file)
+                j += 3
+        if i != 0 and i % n not in (1,2):
+            print("  " + "".join(code.get(codon, 'X') for codon in codons), end="", file=output_file)
+        if i != 0:
+            print(file=output_file)
 
-except StopIteration:
-    pass
-print((" " * (int ((n - i % n) * (4/3.0) - 0.5) + 2)) + "".join(code.get(codon, 'X') for codon in codons), end="")
-print()
+def mktabulator(output_file):
+    generator = tabulator(output_file)
+    next(generator) # start it up
+    return generator
+
+def stoptabulator(gen):
+    try:
+        gen.throw(StopIteration)
+    except StopIteration:
+        pass
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='pretty.py',
+        description='prettify nucleotid sequences'
+    )
+    parser.add_argument('-i', '--input', default='/dev/fd/0', help="input file, default stdin")
+    parser.add_argument('-o', '--output', default='/dev/fd/1', help="output file, default stdout")
+    parser.add_argument('-n', '--blocks', default=10, help="the number of tripletts in a row")
+    args = parser.parse_args()
+    global n
+    n = int(args.blocks) * 3
+
+
+    with open(args.input) as input_file, open(args.output, "w") as output_file:
+        gen = mktabulator(output_file)
+        for line in input_file:
+            line = line.strip()
+            if line.startswith(">"):
+                stoptabulator(gen)
+                print(line, file=output_file)
+                gen = mktabulator(output_file)
+            else:
+                gen.send(line)
+        stoptabulator(gen)
+
+if __name__ == "__main__":
+    main()
