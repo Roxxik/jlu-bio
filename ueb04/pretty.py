@@ -1,71 +1,14 @@
 import argparse
-
-# Table 11
-code_rev = {
-    "F": ["TTY"], # Phenylanalin
-    "L": ["TTR", "CTN"], # Leucin
-    "I": ["ATH"], # Isoleucin
-    "M": ["ATG"], # Methionin
-    "V": ["GTN"], # Valin
-    "S": ["TCN", "AGY"], # Serin
-    "P": ["CCN"], # Prolin
-    "T": ["ACN"], # Threonin
-    "A": ["GCN"], # Alanin
-    "Y": ["TAY"], # Tyrosin
-    "*": ["TAR", "TGA"], # STOP
-    "H": ["CAY"], # Histidin
-    "Q": ["CAR"], # Glutamin
-    "N": ["AAY"], # Asparagin
-    "K": ["AAR"], # Lysin
-    "D": ["GAY"], # Asparaginsäure
-    "E": ["GAR"], # Glutaminsäure
-    "C": ["TGY"], # Cystein
-    "W": ["TGG"], # Tryptophan
-    "R": ["CGN", "AGR"], # Arginin
-    "G": ["GGN"] # Glycin
-}
-
-translation = {
-    "N": "TCAG",
-    "R": "AG",
-    "Y": "TC",
-    "H": "TCA"
-}
-
-def shuffle(s):
-    return ''.join([s[1], s[0], s[2]])
-
-
-def codon_sort_key(codon):
-    table = str.maketrans('TCAG', 'ABCD')
-    return shuffle(codon.translate(table))
-
-def expand_codons(code_rev, translation):
-    code = dict()
-    for aa, patterns in code_rev.items():
-        for pattern in patterns:
-            codons = [pattern]
-            for char, replacements in translation.items():
-                new_codons = []
-                for codon in codons:
-                    if char in codon:
-                        for replacement in replacements:
-                            new_codons.append(codon.replace(char, replacement, 1))
-                    else:
-                        new_codons.append(codon)
-                codons = new_codons
-
-            for codon in codons:
-                code[codon] = aa
-    result = dict(sorted(code.items(), key=lambda x: codon_sort_key(x[0])))
-    return result
-
-code = expand_codons(code_rev, translation)
+import code
 
 # generator that consumes input lines of nucleotides
 # and prints them to a file in a table. with indices and amino acids
 # no validation is done in here. every charater is used as a nucleotide
-def tabulator(output_file):
+def tabulator(output_file, begin=None, dir=None):
+    if begin is None:
+        begin = 0
+    if dir is None:
+        dir = 1
     try:
         line = yield
     except StopIteration:
@@ -96,7 +39,7 @@ def tabulator(output_file):
                     print("  " + "".join(code.get(codon, 'X') for codon in codons), end="", file=output_file)
                     print(file=output_file)
                     codons = list()
-                print(f"{i:>5}: ", end="", file=output_file)
+                print(f"{begin + dir*i:0>10}: ", end="", file=output_file)
             else:
                 print(" ", end="", file=output_file)
 
@@ -151,8 +94,8 @@ def tabulator(output_file):
         if i != 0:
             print(file=output_file)
 
-def mktabulator(output_file):
-    generator = tabulator(output_file)
+def mktabulator(*args, **kwargs):
+    generator = tabulator(*args, **kwargs)
     next(generator) # start it up
     return generator
 
@@ -181,7 +124,19 @@ def main():
             if line.startswith(">"):
                 stoptabulator(gen)
                 print(line, file=output_file)
-                gen = mktabulator(output_file)
+                # try to read prodigal header
+                parts = line.split("#")
+                if len(parts) == 5:
+                    id, begin, end, dir, notes = parts
+                    begin = int(begin.strip())
+                    end = int(end.strip())
+                    dir = int(dir.strip())
+                    if dir == 1:
+                        gen = mktabulator(output_file, begin, dir)
+                    else:
+                        gen = mktabulator(output_file, end, dir)
+                else:
+                    gen = mktabulator(output_file)
             else:
                 gen.send(line)
         stoptabulator(gen)
