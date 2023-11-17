@@ -1,5 +1,5 @@
 import argparse
-import code
+from code import code
 
 # generator that consumes input lines of nucleotides
 # and prints them to a file in a table. with indices and amino acids
