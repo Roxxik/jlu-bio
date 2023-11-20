@@ -247,5 +247,8 @@ def main():
   # gc content, codon_frequencies
   # 
   # k-mer analysis, also in comparision
+  # put this into a notebook?
+  #
+  # compare between different organisms
 if __name__ == "__main__":
   main()
