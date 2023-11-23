@@ -128,23 +128,6 @@ def calculate_codon_frequency(sequences):
                 codon_frequency[codon] = 1
     return codon_frequency
 
-def plot_codon_frequency(codon_freq):
-   # Sorting codons for better visualization
-  sorted_codons = sorted(codon_freq.keys())
-  sorted_freqs = [codon_freq[codon] for codon in sorted_codons]
-
-  plt.figure(figsize=(15, 5))
-  plt.bar(sorted_codons, sorted_freqs, color='skyblue')
-  plt.xlabel('Codon')
-  plt.ylabel('Frequency')
-  plt.title('Codon Usage Frequency')
-  plt.xticks(rotation=90)  # Rotate labels for better readability
-  plt.show()
-
-# Example data
-sequence_lengths = [100, 200, 150, 120, 180, 220, 140, 160]
-gc_contents = [40, 50, 45, 60, 55, 65, 42, 58]
-
 def group_codon_frequency_by_amino_acid(sequences):
     aa_codon_frequency = {}
     for seq in sequences:
@@ -157,34 +140,6 @@ def group_codon_frequency_by_amino_acid(sequences):
                 aa_codon_frequency[aa][codon] = aa_codon_frequency[aa].get(codon, 0) + 1
     return aa_codon_frequency
 
-def plot_codons_grouped(aa_codon_freq):
-  # Prepare data for plotting
-  amino_acids = sorted(aa_codon_freq.keys())
-  grouped_data = {codon: [aa_codon_freq[aa].get(codon, 0) for aa in amino_acids] for codon in code.values()}
-
-  # Number of bars for each amino acid
-  n_bars = len(amino_acids)
-
-  # Positions of the bars on the x-axis
-  ind = np.arange(n_bars)
-
-  # Width of each bar
-  bar_width = 0.35
-
-  plt.figure(figsize=(15, 8))
-
-  # Create bars for each codon
-  for i, (codon, freqs) in enumerate(grouped_data.items()):
-      plt.bar(ind + i * bar_width, freqs, width=bar_width, label=codon)
-
-  # Add labels, title, and legend
-  plt.xlabel('Amino Acid')
-  plt.ylabel('Frequency')
-  plt.title('Codon Usage Grouped by Amino Acid')
-  plt.xticks(ind + bar_width / 2, amino_acids)
-  plt.legend(title="Codon")
-
-  plt.show()
 
 def plot_codons_grouped(aa_codon_freq):
   amino_acids = sorted(aa_codon_freq.keys())
@@ -243,7 +198,7 @@ def main():
   print(groups)
   plot_codons_grouped(groups)
 
-  # TODO compare1 genome to full sequence, code density, plot where the genes are?
+  # TODO compare genes to genome, code density, plot where the genes are?
   # gc content, codon_frequencies
   # 
   # k-mer analysis, also in comparision
